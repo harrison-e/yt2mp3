@@ -1,0 +1,81 @@
+#!/usr/bin/sh
+
+USAGE="Usage: `basename $0` URL [-d SAVE_DIR] NEW_FILENAME"
+#   where URL is the YouTube URL to be downloaded from 
+#   where NEW_FILENAME is the name of the new mp3 file to be downloaded 
+#
+#   by default, files are saved in the current directory. this can be 
+#   changed with the -d parameter, followed by the desired directory
+
+# make sure yt-dlp is downloaded 
+if [ ! `command -v yt-dlp &> /dev/null` ]; then 
+  echo "Install \`yt-dlp\` and set as executable to use `basename $0`"
+  exit 1
+fi
+
+# help message 
+if [ "$1" = "-h" -o "$1" = "--help" ]; then
+  echo "$USAGE" 
+  exit 0
+fi
+ 
+# validate args
+if [ "$#" -lt "2" ]; then
+  echo "`basename $0`: Too few arguments\n$USAGE"
+  exit 1
+fi
+
+
+# parse args 
+# first arg is always URL 
+URL=$1
+shift
+
+# middle args; options
+while [ "$#" -gt "1" ]
+do 
+  case $1 in
+    # specified save directory
+    "-d")
+      if [ "$#" -gt "1" -a -d "$2" -a -w "$2" ]; then
+        shift
+        $SAVE_DIR=$1
+      elif [ "$#" -eq "1" ]; then
+        echo "Option \`-d\` must be followed by a valid directory path"
+        exit 1
+      elif [ ! -d "$2" ]; then
+        echo "\'$2\' is not a valid directory path"
+        exit 1
+      elif [ ! -w "$2" ]; then
+        echo "Cannot write to directory: \'$2\'"
+        exit 1
+      fi
+      ;;
+
+    # ignore help in conjunction with other commands (for now)
+    "-h")
+      ;;
+    "--help")
+      ;;
+
+    # everything else (invalid)
+    *)
+      echo "Invalid option: \`$1\`\n$USAGE"
+      exit 1
+      ;;
+  esac
+  shift
+done
+
+# last arg is always filename 
+FILENAME=$1
+
+# execute yt-dlp with correct options
+YT_DLP_OPTIONS="-q --no-playlist -x --audio-format mp3 -o ${FILENAME}"
+if [ -z "$SAVE_DIR" ]; then 
+  yt-dlp $YT_DLP_OPTIONS $URL
+else 
+  yt-dlp $YT_DLP_OPTIONS -P $SAVE_DIR $URL
+fi 
+
+exit $?
