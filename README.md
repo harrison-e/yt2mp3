@@ -8,6 +8,6 @@ depends on yt-dlp. download with pip, snap, or [compile from source.](https://gi
 
 ## desired features
 
-- optional filename (currently required)
 - playlist support
 - support to read urls/names from files
+- better arg parser
