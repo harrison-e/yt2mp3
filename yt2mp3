@@ -1,11 +1,27 @@
 #!/usr/bin/sh
 
-USAGE="Usage: `basename $0` URL [-d SAVE_DIR] NEW_FILENAME"
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# usage
+USAGE="Usage: `basename $0` URL [-d SAVE_DIR] [-n FILENAME]"
 #   where URL is the YouTube URL to be downloaded from 
 #   where NEW_FILENAME is the name of the new mp3 file to be downloaded 
 #
 #   by default, files are saved in the current directory. this can be 
 #   changed with the -d parameter, followed by the desired directory
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# default options
+YT_DLP_OPTIONS="-q --no-playlist -x --audio-format mp3"
+# quiet, dont download playlist, extract audio, as mp3
+SAVE_DIR=`pwd`  # save to current dir by default
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# script logic
 
 # make sure yt-dlp is downloaded 
 if [ ! `command -v yt-dlp &> /dev/null` ]; then 
@@ -20,11 +36,10 @@ if [ "$1" = "-h" -o "$1" = "--help" ]; then
 fi
  
 # validate args
-if [ "$#" -lt "2" ]; then
+if [ "$#" -lt "1" ]; then
   echo "`basename $0`: Too few arguments\n$USAGE"
   exit 1
 fi
-
 
 # parse args 
 # first arg is always URL 
@@ -39,18 +54,35 @@ do
     "-d")
       if [ "$#" -gt "1" -a -d "$2" -a -w "$2" ]; then
         shift
-        $SAVE_DIR=$1
+        SAVE_DIR=$1
       elif [ "$#" -eq "1" ]; then
-        echo "Option \`-d\` must be followed by a valid directory path"
+        echo "Option '-d' must be followed by a valid directory path"
         exit 1
       elif [ ! -d "$2" ]; then
-        echo "\'$2\' is not a valid directory path"
+        echo "'${2}' is not a valid directory path"
         exit 1
       elif [ ! -w "$2" ]; then
-        echo "Cannot write to directory: \'$2\'"
+        echo "Cannot write to directory: '${2}'"
         exit 1
       fi
       ;;
+
+    # specified filename 
+    "-n")
+    if [ "$#" -gt "1" -a ! -e "$2" -a -w "$SAVE_DIR" ]; then 
+      shift 
+      FILENAME=$1
+    elif [ "$#" -eq "1" ]; then 
+      echo "Option '-n' must be followed by a name for the output mp3"
+      exit 1
+    elif [ -e $2 ]; then
+      echo "File '${2}' already exists"
+      exit 1
+    elif [ ! -w "$SAVE_DIR" ]; then
+      echo "Cannot write to directory: '${SAVE_DIR}'"
+      exit 1
+    fi 
+    ;;
 
     # ignore help in conjunction with other commands (for now)
     "-h")
@@ -66,16 +98,17 @@ do
   esac
   shift
 done
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-# last arg is always filename 
-FILENAME=$1
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # execute yt-dlp with correct options
-YT_DLP_OPTIONS="-q --no-playlist -x --audio-format mp3 -o ${FILENAME}"
-if [ -z "$SAVE_DIR" ]; then 
-  yt-dlp $YT_DLP_OPTIONS $URL
-else 
-  yt-dlp $YT_DLP_OPTIONS -P $SAVE_DIR $URL
-fi 
+YT_DLP_OPTIONS="${YT_DLP_OPTIONS} -P ${SAVE_DIR}"
+if [ -n "$FILENAME" ]; then
+  YT_DLP_OPTIONS="${YT_DLP_OPTIONS} -o ${FILENAME}"
+fi
+
+yt-dlp $YT_DLP_OPTIONS $URL
 
 exit $?
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
